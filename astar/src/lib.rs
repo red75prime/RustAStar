@@ -1,3 +1,5 @@
+#![allow(unstable)]
+
 extern crate arena;
 
 use arena::TypedArena;
@@ -5,6 +7,8 @@ use std::collections::BinaryHeap;
 use std::collections::BTreeSet;
 use std::rc::Rc;
 use std::cmp::Ordering;
+use std::mem;
+
 
 struct FrontierElem<'a,A,S> where S:'a {
   prev : Option<Rc<FrontierElem<'a,A,S>>>,
@@ -34,15 +38,40 @@ impl<'a,A,S> Ord for FrontierElem<'a,A,S> {
   }
 }
 
-fn collect_actions<'a,A,S>(cur: &Rc<FrontierElem<'a,A,S>>, mut res: Vec<A>) -> Vec<A>
+fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
   where A:Clone {
-  if let Some(ref action)=(**cur).action {
-    res.push(action.clone());
+  let mut cnt=0us;
+  // first pass. count actions
+  {
+    let mut cur=fel;
+    while let Some(ref prev)=cur.prev {
+      if let Some(_)=cur.action {cnt=cnt+1;};
+      cur=prev;
+    }
   }
-  match (**cur).prev {
-    Some(ref prev) => collect_actions(prev, res),
-    None => res,
+  let mut ret=Vec::<A>::with_capacity(cnt);
+  // second pass. fill ret vector
+  {
+    let mut idx=cnt-1;
+    let mut cur=fel;
+    unsafe {
+      ret.set_len(cnt); //unsafe. vector values aren't initialized
+      while let Some(ref prev)=cur.prev {
+        if let Some(ref action)=cur.action {
+          ret[idx]=action.clone();
+          // when I tried ret[idx]=action, I've got confusing error message: 
+          // ret[idx]=action".
+          // ^-- expecting A got &-ptr
+          // Message should be
+          // ret[idx]=action".
+          //          ^-- expecting A got &-ptr
+        }; 
+        cur=prev;
+        idx=idx-1;
+      }
+    }
   }
+  ret
 }
 
 fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) -> Result<Vec<A>,()>
@@ -59,7 +88,7 @@ fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) -> R
   while let Some(fnode)=frontier.pop() {
     let cstate=(*fnode).state;
     if fend(cstate) {
-      return Ok(collect_actions(&fnode,vec![]));
+      return Ok(collect_actions(&fnode));
     }
     visited.insert(cstate);
     for (a,s,c) in fnxt(cstate).drain() {
@@ -73,6 +102,7 @@ fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) -> R
   return Err(());
 }
 
+#[cfg(test)]
 mod tests {
   use super::astar;
   use std::num::Float as Fl;
