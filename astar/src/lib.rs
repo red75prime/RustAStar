@@ -7,7 +7,6 @@ use std::collections::BinaryHeap;
 use std::collections::BTreeSet;
 use std::rc::Rc;
 use std::cmp::Ordering;
-use std::mem;
 
 
 struct FrontierElem<'a,A,S> where S:'a {
