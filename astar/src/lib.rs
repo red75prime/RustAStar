@@ -64,11 +64,12 @@ fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
           // Message should be
           // ret[idx]=action".
           //          ^-- expecting A got &-ptr
+          idx=idx-1;
         }; 
         cur=prev;
-        idx=idx-1;
       }
     }
+    assert_eq!(idx,std::usize::MAX);
   }
   ret
 }
