@@ -1,3 +1,6 @@
+// Some copyleft
+//
+
 #![allow(unstable)]
 
 extern crate arena;
@@ -24,6 +27,7 @@ impl<'a,A,S> PartialEq for FrontierElem<'a,A,S> {
 }
 
 impl<'a,A,S> PartialOrd for FrontierElem<'a,A,S> {
+  // Ordering is reversed, for BinaryHeap to act as MinHeap.
   fn partial_cmp(&self, other : &FrontierElem<'a,A,S>) -> Option<Ordering> {
     other.total_cost.partial_cmp(&self.total_cost)
   }
@@ -33,10 +37,11 @@ impl<'a,A,S> Eq for FrontierElem<'a,A,S> {}
 
 impl<'a,A,S> Ord for FrontierElem<'a,A,S> {
   fn cmp(&self, other : &FrontierElem<'a,A,S>) -> Ordering {
-    other.total_cost.partial_cmp(&self.total_cost).unwrap()
+    other.total_cost.partial_cmp(&self.total_cost).unwrap() 
   }
 }
 
+/// Copies action fields from single-linked list to array in reverse order.
 fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
   where A:Clone {
   let mut cnt=0us;
@@ -53,17 +58,19 @@ fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
   {
     let mut idx=cnt-1;
     let mut cur=fel;
+    // I didn't find safe and fast way to populate vector from the end to the beginning.
     unsafe {
       ret.set_len(cnt); //unsafe. vector values aren't initialized
       while let Some(ref prev)=cur.prev {
         if let Some(ref action)=cur.action {
           ret[idx]=action.clone();
-          // when I tried ret[idx]=action, I've got confusing error message: 
+          // To report:
+          // When I tried ret[idx]=action, I've got confusing error message: 
           // ret[idx]=action".
-          // ^-- expecting A got &-ptr
+          // ^-- expecting A, but found &-ptr
           // Message should be
           // ret[idx]=action".
-          //          ^-- expecting A got &-ptr
+          //          ^-- expecting A, but found &-ptr
           idx=idx-1;
         }; 
         cur=prev;
@@ -74,7 +81,8 @@ fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
   ret
 }
 
-fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) -> Result<Vec<A>,()>
+/// 
+pub fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) -> Result<Vec<A>,()>
   where S : Ord,
         A : Clone,
         Fnxt : Fn(&S) -> Vec<(A,S,f32)>,
@@ -82,7 +90,7 @@ fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) -> R
         Fheu : Fn(&S) -> f32  {
   let mut frontier=BinaryHeap::<Rc<FrontierElem<A,S>>>::new();
   let mut visited=BTreeSet::<&S>::new();
-  let state_arena=TypedArena::<S>::new();
+  let state_arena=TypedArena::<S>::with_capacity(128);
   let rs0 = state_arena.alloc(s0);
   frontier.push(Rc::new(FrontierElem::<A,S>{prev:None, action:None, state:rs0, cost:0.0, total_cost:0.0}));
   while let Some(fnode)=frontier.pop() {
