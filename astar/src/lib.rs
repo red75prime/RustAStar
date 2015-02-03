@@ -1,8 +1,6 @@
 // Some copyleft
 //
 
-#![allow(unstable)]
-
 extern crate arena;
 
 use arena::TypedArena;
@@ -63,9 +61,9 @@ pub fn astar<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fheu) 
         Fnxt : Fn(&S) -> Vec<(A,S,f32)>,
         Fend : Fn(&S) -> bool,
         Fheu : Fn(&S) -> f32  {
+  let state_arena=TypedArena::<S>::with_capacity(128);
   let mut frontier=BinaryHeap::<Rc<FrontierElem<A,S>>>::new();
   let mut visited=BTreeSet::<&S>::new();
-  let state_arena=TypedArena::<S>::with_capacity(128);
   let rs0 = state_arena.alloc(s0);
   frontier.push(Rc::new(FrontierElem::<A,S>{prev:None, action:None, state:rs0, cost:0.0, total_cost:0.0}));
   while let Some(fnode)=frontier.pop() {
@@ -90,7 +88,7 @@ mod tests {
   use super::astar;
   use std::num::Float as Fl;
 
-  #[derive(Show,Clone)]
+  #[derive(Debug,Clone)]
   struct GoDir(i32, i32);
 
   #[derive(PartialEq, PartialOrd, Eq, Ord)]
