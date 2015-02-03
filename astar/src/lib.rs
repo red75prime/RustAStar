@@ -44,40 +44,15 @@ impl<'a,A,S> Ord for FrontierElem<'a,A,S> {
 /// Copies action fields from single-linked list to array in reverse order.
 fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
   where A:Clone {
-  let mut cnt=0us;
-  // first pass. count actions
-  {
-    let mut cur=fel;
-    while let Some(ref prev)=cur.prev {
-      if let Some(_)=cur.action {cnt=cnt+1;};
-      cur=prev;
-    }
+  let mut ret=Vec::<A>::with_capacity(4);
+  let mut cur=fel;
+  while let Some(ref prev)=cur.prev {
+    if let Some(ref action)=cur.action {
+      ret.push(action.clone());
+    }; 
+    cur=prev;
   }
-  let mut ret=Vec::<A>::with_capacity(cnt);
-  // second pass. fill ret vector
-  {
-    let mut idx=cnt-1;
-    let mut cur=fel;
-    // I didn't find safe and fast way to populate vector from the end to the beginning.
-    unsafe {
-      ret.set_len(cnt); //unsafe. vector values aren't initialized
-      while let Some(ref prev)=cur.prev {
-        if let Some(ref action)=cur.action {
-          ret[idx]=action.clone();
-          // To report:
-          // When I tried ret[idx]=action, I've got confusing error message: 
-          // ret[idx]=action".
-          // ^-- expecting A, but found &-ptr
-          // Message should be
-          // ret[idx]=action".
-          //          ^-- expecting A, but found &-ptr
-          idx=idx-1;
-        }; 
-        cur=prev;
-      }
-    }
-    assert_eq!(idx,std::usize::MAX);
-  }
+  ret.as_mut_slice().reverse();
   ret
 }
 
