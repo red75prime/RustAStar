@@ -3,3 +3,8 @@
 name = "astar"
 version = "0.0.1"
 authors = ["red75prime <red75prim@gmail.com>"]
+
+repository = "https://github.com/red75prime/RustAStar"
+keywords = ["astar", "search", "path", "pathfinding"]
+license = "MIT"
+description = "Implementation of A* search algorithm"
