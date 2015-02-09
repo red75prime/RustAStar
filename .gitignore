@@ -44,3 +44,6 @@ Temporary Items
 
 #Cargo build folder
 target
+
+#Library project requires Cargo.lock to be here
+Cargo.lock
