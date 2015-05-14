@@ -1,3 +1,5 @@
+#![feature(rustc_private)]
+
 extern crate arena;
 
 use arena::TypedArena;
@@ -89,7 +91,8 @@ pub fn astar_opt<S,A,Fnxt,Fend,Fheu>(s0 : S, fnxt : Fnxt, fend : Fend, fheu : Fh
       return Err(FrontierLimit(collect_actions(&fnode)));
     }
     visited.insert(cstate);
-    for (a,s,c) in fnxt(cstate).drain() {
+    let nxts=fnxt(cstate);
+    for (a,s,c) in nxts {
       if !visited.contains(&s) {
         let rs=state_arena.alloc(s);
         let hcost=fheu(rs);
@@ -111,7 +114,7 @@ fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
     }; 
     cur=prev;
   }
-  ret.as_mut_slice().reverse();
+  (&mut ret[..]).reverse();
   ret
 }
 
