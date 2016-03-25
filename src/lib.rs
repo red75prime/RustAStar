@@ -121,23 +121,22 @@ fn collect_actions<A,S>(fel: &Rc<FrontierElem<A,S>>) -> Vec<A>
 #[cfg(test)]
 mod tests {
   use super::{astar, astar_opt, AstarOpt};
-  use std::num::Float as Fl;
 
-  #[derive(Debug,Clone)]
+  #[derive(Debug,Clone,Copy)]
   struct GoDir(i32, i32);
 
-  #[derive(PartialEq, PartialOrd, Eq, Ord)]
+  #[derive(Debug,PartialEq,Eq,PartialOrd,Ord)]
   struct Pos(i32,i32);
 
   fn nxt(s : &Pos) -> Vec<(GoDir,Pos,f32)> {
    let &Pos(x,y)=s;
    let mut ret=Vec::<(GoDir, Pos, f32)>::with_capacity(8);
-   for dir in vec![GoDir(1,0),GoDir(1,1),GoDir(0,1),GoDir(-1,1),GoDir(-1,0),GoDir(-1,-1),GoDir(0,-1),GoDir(1,-1)].drain() {
+   for &dir in [GoDir(1,0),GoDir(1,1),GoDir(0,1),GoDir(-1,1),GoDir(-1,0),GoDir(-1,-1),GoDir(0,-1),GoDir(1,-1)].iter() {
      let dx=dir.0;
      let dy=dir.1;
      let x1=x+dx;
      let y1=y+dy;
-     ret.push((dir,Pos(x1,y1),Fl::sqrt((dx*dx+dy*dy) as f32)));
+     ret.push((dir,Pos(x1,y1),f32::sqrt((dx*dx+dy*dy) as f32)));
    }
    ret
   }
@@ -146,19 +145,15 @@ mod tests {
     *s==Pos(5,10)
   }
 
-  fn sqrt(x : f32) -> f32 {
-   x.sqrt()
-  }
-
   fn heur(s : &Pos) -> f32 {
-    let x=(s.0-5) as f32;
-    let y=(s.1-10) as f32;
-    Fl::sqrt(x*x+y*y)
+    let x=(s.0 - 5) as f32;
+    let y=(s.1 - 10) as f32;
+    f32::sqrt(x*x+y*y)
   }
 
   #[test]
   fn not_very_good_test() {
-    let path=astar(0i32, |s : &i32| vec![(*s,*s+1,0.0)], |s : &i32| *s==2, |s : &i32| 0.0);
+    let path=astar(0i32, |s : &i32| vec![(*s,*s+1,0.0)], |s : &i32| *s==2, |_ : &i32| 0.0);
     println!("{:?}", path);
     assert_eq!(path, Ok(vec![0i32,1]));
     let path1=astar_opt(Pos(0,0), nxt, end, heur, AstarOpt::AOMaxFrontier(2));
