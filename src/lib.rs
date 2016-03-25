@@ -158,8 +158,187 @@ mod tests {
         assert!(path1.is_err())
     }
 
-    #[test]
-    fn maze() {
+    #[derive(Debug)]
+    struct Maze {
+        grid: Vec<Vec<bool>>, // true - passable, false - impassable
+        tgt_x: usize,
+        tgt_y: usize,
+    }
 
+    impl Maze {
+        fn passable(&self, x: usize, y: usize) -> bool {
+            self.grid[y][x]
+        }
+    }
+
+    fn str2vec(s: &str) -> (Maze, usize, usize) {
+        let mut grid = vec![];
+        let mut tgt_x = 0;
+        let mut tgt_y = 0;
+        let mut start_x = 0;
+        let mut start_y = 0;
+        for (y,line) in s.lines().enumerate() {
+            let mut gline = vec![];
+            for (x,ch) in line.chars().enumerate() {
+                match ch {
+                    ' '|'.' => gline.push(true),
+                    '*' => {
+                        gline.push(true);
+                        tgt_x = x;
+                        tgt_y = y;
+                    },
+                    '@' => {
+                        gline.push(true);
+                        start_x = x;
+                        start_y = y;
+                    },
+                    _ => {
+                        gline.push(false);
+                    },
+                }
+            }
+            grid.push(gline);
+        }
+        (Maze { grid: grid, tgt_x: tgt_x, tgt_y: tgt_y }, start_x, start_y)
+    }
+
+    #[derive(Debug,PartialEq,Eq,PartialOrd,Ord)]
+    struct MPos(usize,usize);
+
+    #[derive(Debug,Clone,Copy,PartialEq,Eq)]
+    enum MAction {
+        Left, Right, Up, Down, Jump,
+    }
+
+    use self::MAction::{Left, Right, Up, Down, Jump};
+
+    impl MAction {
+        fn cost(self) -> f32 {
+            1.
+        }
+    }
+
+    struct MActions {
+        cur: Option<MAction>,
+    }
+
+    fn actions() -> MActions {
+        MActions{ cur: None }
+    }
+
+    impl Iterator for MActions {
+        type Item = MAction;
+
+        fn next(&mut self) -> Option<MAction> {
+            match self.cur {
+                None => {
+                    self.cur = Some(Left);
+                    self.cur
+                },
+                Some(Left) => {
+                    self.cur = Some(Right);
+                    self.cur
+                }
+                Some(Right) => {
+                    self.cur = Some(Up);
+                    self.cur
+                }
+                Some(Up) => {
+                    self.cur = Some(Down);
+                    self.cur
+                }
+                Some(Down) => {
+                    self.cur = Some(Jump);
+                    self.cur
+                }
+                Some(Jump) => {
+                    self.cur = None;
+                    self.cur
+                }
+            }
+        }
+    }
+
+    fn mexec(&MPos(x,y): &MPos, a: MAction) -> MPos {
+        match a {
+            Left => MPos(x-1, y),
+            Right => MPos(x+1, y),
+            Up => MPos(x, y-1),
+            Down => MPos(x, y+1),
+            Jump => MPos(x, y),
+        }
+    }
+
+    fn mnext(maze: &Maze, pos: &MPos) -> Vec<(MAction, MPos, f32)> {
+        println!("Expanding {:?}", pos);
+        actions()
+            .filter_map(|a| {
+                let next_pos =  mexec(pos, a);
+                let MPos(x,y) = next_pos;
+                println!("    with {:?}", a);
+                if maze.passable(x,y) {
+                    Some((a, next_pos, a.cost()))
+                } else {
+                    None
+                }
+            })
+            .collect()
+    }
+
+    fn mheur(maze: &Maze, &MPos(x,y): &MPos) -> f32 {
+        let tgt_x = maze.tgt_x as f32;
+        let tgt_y = maze.tgt_y as f32;
+        let x = x as f32;
+        let y = y as f32;
+        f32::sqrt((tgt_x-x)*(tgt_x-x)+(tgt_y-y)*(tgt_y-y))
+    }
+
+    fn mgoal(&Maze{tgt_x, tgt_y, ..}: &Maze, &MPos(x,y): &MPos) -> bool {
+        tgt_x==x && tgt_y==y
+    }
+
+
+    #[test]
+    fn maze1() {
+        let (maze, sx, sy) = str2vec(
+"
+###############
+#@.#.........##
+##.###.#####.##
+#..#.......#.##
+##...#####.#.*#
+###############
+");
+        assert!(sx==1);
+        assert!(sy==2);
+        assert!(maze.tgt_x==13);
+        assert!(maze.tgt_y==5);
+        let path = astar(MPos(sx,sy), |s|mnext(&maze,s), |s|mgoal(&maze,s), |s|mheur(&maze,s));
+        println!("Path: {:?}", path);
+        assert!(path==Ok(vec![Right,Down,Down,Down,Right,Right,Up,Right,Right,Up,Up,Right,Right,Right,Right,Right,Right,Down,Down,Down,Right]));
+    }
+
+    #[test]
+    fn maze2() {
+        let (maze, sx, sy) = str2vec(
+"
+###############
+#@.#.........##
+##.###.#####.##
+#..#.......#.##
+##...#####.#.*#
+#.#.#..##.#####
+#.#.#.###.#####
+#.#.#.........#
+#.....#######.#
+###############
+");
+        assert!(sx==1);
+        assert!(sy==2);
+        assert!(maze.tgt_x==13);
+        assert!(maze.tgt_y==5);
+        let path = astar(MPos(sx,sy), |s|mnext(&maze,s), |s|mgoal(&maze,s), |s|mheur(&maze,s));
+        println!("Path: {:?}", path);
+        assert!(path==Ok(vec![Right,Down,Down,Down,Right,Right,Up,Right,Right,Up,Up,Right,Right,Right,Right,Right,Right,Down,Down,Down,Right]));
     }
 }
